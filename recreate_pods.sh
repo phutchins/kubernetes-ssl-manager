@@ -13,7 +13,7 @@ DEPLOYMENTS=(${DEPLOYMENTS})
 DATE=$(date)
 NAMESPACE=${NAMESPACE:-default}
 
-for DEPLOYMENT in "${DEPLOYMENTS[@]}"
+for DEPLOYMENT in $DEPLOYMENTS
 do
     NAME=$(kubectl get deployments --namespace $NAMESPACE $DEPLOYMENT -o=template --template='{{index .spec.template.spec.containers 0 "name"}}')
     PATCH=$(NAME=$NAME DATE=$DATE echo "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"$NAME\", \"env\": [{\"name\": \"LETSENCRYPT_CERT_REFRESH\", \"value\": \"$DATE\"}]}]}}}}")
