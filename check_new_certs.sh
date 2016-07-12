@@ -1,7 +1,11 @@
 #!/bin/bash
 
 # Get all certs that we manage and their expiration dates
-CERT_SECRET_NAMES=$(kubectl get secrets --namespace=storj-prod -o jsonpath='{.items[?(@.metadata.type=="cert")].metadata.name}')
+
+# Need to make sure the escaped single quotes work here instead of double quotes, have to parse env var for secret prefix
+#SECRET_PREFIX="cert"
+
+CERT_SECRET_NAMES=$(kubectl get secrets --namespace=storj-prod -o jsonpath=\'{.items[?(@.metadata.labels.type=="$SECRET_PREFIX")].metadata.name}\')
 
 # Trim off the prepending 'cert.' from each of the cert names
 
