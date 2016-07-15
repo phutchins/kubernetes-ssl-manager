@@ -10,37 +10,47 @@
 # We want to convert fullchain.pem into proxycert
 # and privkey.pem into proxykey and then save as a secret!
 
-if [ -z "$SECRET_NAME" ]; then
-    echo "ERROR: Secret name is empty or unset"
-    exit 1
+if [ -z "$SECRET_PREFIX" ]; then
+  SECRET_PREFIX=cert
 fi
+
 
 CERT_LOCATION='/etc/letsencrypt/live'
 
-DOMAINS=($DOMAINS)
+DOMAIN_ARRAY=($DOMAINS)
+MAIN_DOMAIN=${DOMAIN_ARRAY[0]}
 
-DOMAIN=${DOMAINS[0]}
+for DOMAIN in $DOMAINS; do
+  SECRET_NAME="$SECRET_PREFIX.$DOMAIN"
 
-CERT=$(cat $CERT_LOCATION/$DOMAIN/fullchain.pem | base64 --wrap=0)
-KEY=$(cat $CERT_LOCATION/$DOMAIN/privkey.pem | base64 --wrap=0)
-DHPARAM=$(openssl dhparam 2048 | base64 --wrap=0)
+  CERT=$(cat $CERT_LOCATION/$MAIN_DOMAIN/fullchain.pem | base64 --wrap=0)
+  KEY=$(cat $CERT_LOCATION/$MAIN_DOMAIN/privkey.pem | base64 --wrap=0)
+  DHPARAM=$(openssl dhparam 2048 | base64 --wrap=0)
 
-NAMESPACE=${NAMESPACE:-default}
+  NAMESPACE=${NAMESPACE:-default}
 
-kubectl get secrets --namespace $NAMESPACE $SECRET_NAME && ACTION=replace || ACTION=create;
+  EXPIRE_DATE=$(openssl x509 -enddate -noout -in $CERT_LOCATION/$MAIN_DOMAIN/fullchain.pem | awk -F "=" '{print $2}' | base64 --wrap=0)
 
-cat << EOF | kubectl $ACTION -f -
-{
- "apiVersion": "v1",
- "kind": "Secret",
- "metadata": {
-   "name": "$SECRET_NAME",
-   "namespace": "$NAMESPACE"
- },
- "data": {
-   "proxycert": "$CERT",
-   "proxykey": "$KEY",
-   "dhparam": "$DHPARAM"
- }
-}
+  kubectl get secrets --namespace $NAMESPACE $SECRET_NAME && ACTION=replace || ACTION=create;
+
+  cat << EOF | kubectl $ACTION -f -
+  {
+   "apiVersion": "v1",
+   "kind": "Secret",
+   "metadata": {
+     "labels": {
+       "type": "cert"
+     },
+     "name": "$SECRET_NAME",
+     "namespace": "$NAMESPACE"
+   },
+   "data": {
+     "tls.crt": "$CERT",
+     "tls.key": "$KEY",
+     "tls.dhparam": "$DHPARAM",
+     "tls.expires": "$EXPIRE_DATE"
+   }
+  }
 EOF
+
+done

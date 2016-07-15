@@ -1,5 +1,7 @@
 FROM nginx
 
+ENV KUBECTL_VERSION v1.3.0
+
 RUN apt-get update && apt-get install -y git wget cron bc
 
 RUN mkdir -p /letsencrypt/challenges/.well-known/acme-challenge
@@ -12,7 +14,7 @@ RUN ./letsencrypt-auto; exit 0
 RUN echo "OK" > /letsencrypt/challenges/.well-known/acme-challenge/health
 
 # Install kubectl
-RUN wget https://storage.googleapis.com/kubernetes-release/release/v1.2.2/bin/linux/amd64/kubectl
+RUN wget https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl
 RUN chmod +x kubectl
 RUN mv kubectl /usr/local/bin/
 
